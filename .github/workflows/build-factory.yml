@@ -21,39 +21,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' && !startsWith(github.ref, 'refs/heads/v') && !startsWith(github.ref, 'refs/tags/v') }}
 jobs:
-  build-binaries:
-    name: Build binaries
-    runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        arch: [x64, arm64]
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set Build Environment Variables
-      if: ${{ inputs.tag != '' }}
-      run: |
-        TAG_NAME="${{ inputs.tag }}"
-        echo "HARVESTER_UI_VERSION=$TAG_NAME" >> $GITHUB_ENV
-        echo "HARVESTER_UI_PLUGIN_BUNDLED_VERSION=$TAG_NAME" >> $GITHUB_ENV
-        echo "HARVESTER_INSTALLER_REF=$TAG_NAME" >> $GITHUB_ENV
-        echo "HARVESTER_ADDONS_VERSION=$TAG_NAME" >> $GITHUB_ENV
-
-    # Build binaries
-    - name: Run make ci
-      if: ${{ matrix.arch == 'x64' }}
-      run: make ci
-    - name: Run make arm
-      if: ${{ matrix.arch == 'arm64' }}
-      run: make arm
-
-    - name: Upload binaries
-      uses: actions/upload-artifact@v4
-      with:
-        name: binaries_${{ matrix.arch }}_artifact
-        path: ./bin/*
-
 
   build-iso:
     name: Build ISO
@@ -61,7 +28,7 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/') || startsWith(github.ref, 'refs/tags/') }}
     strategy:
       matrix:
-        arch: [x64, arm64]
+        arch: [x64]
     permissions:
       contents: write # for github prerelease action
       id-token: write # for reading credential https://github.com/rancher-eio/read-vault-secrets
@@ -97,7 +64,7 @@ jobs:
       run: |
         make build-iso
       env:
-        REPO: rancher
+        REPO: ${{ github.repository_owner }}
         DRONE_BRANCH: ${{ env.branch }}
 
     - name: build-tag-iso
@@ -105,7 +72,7 @@ jobs:
       run: |
         make build-iso
       env:
-        REPO: rancher
+        REPO: ${{ github.repository_owner }}
         DRONE_BRANCH: ${{ github.ref_name }}
         DRONE_TAG: ${{ github.ref_name }}
 
